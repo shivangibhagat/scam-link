@@ -1,216 +1,343 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Yes / No - Centered Dodging No Button</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Do you want to continue?</title>
+
   <style>
-    /* Center the whole page */
-    html, body {
-      height: 100%;
-      margin: 0;
-    }
-    body {
-      display: grid;
-      place-items: center; /* centers horizontally and vertically */
-      background: #f0f4f8;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    /* ========== Theme variables (high-contrast tuned) ========== */
+    :root{
+      --bg-1: linear-gradient(180deg, #051025 0%, #021018 100%);
+      --card-bg: rgba(255,255,255,0.03);
+      --glass-border: rgba(255,255,255,0.08);
+      --accent: #06b6d4;
+      --yes: #047857;
+      --yes-strong: #065f46;
+      --no: #b91c1c;
+      --muted: rgba(255,255,255,0.95);
+      --muted-secondary: rgba(255,255,255,0.88);
+      --card-radius: 16px;
+      --shadow: 0 14px 50px rgba(0,0,0,0.6);
+      --glass-blur: 10px;
+      --max-width: 720px;
+      --focus-ring: rgba(6,182,212,0.22);
     }
 
-    /* Card in the center */
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; scroll-behavior: auto !important; }
+    }
+
+    html,body { height:100%; margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; background:var(--bg-1); color:var(--muted); }
+    body { display:grid; place-items:center; padding:20px; }
+
+    .container { width:100%; max-width:var(--max-width); margin:0 auto; display:flex; align-items:center; justify-content:center; gap:18px; flex-direction:column; }
+
     .card {
-      width: 640px;
-      max-width: 94%;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(20,20,30,0.08);
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      align-items: center; /* center contents horizontally */
-      gap: 12px;
-      text-align: center;  /* center text inside card */
+      width:100%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:var(--card-radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(var(--glass-blur));
+      padding:24px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+      text-align:center;
     }
 
-    .question { font-size: 20px; margin: 4px 0 8px; }
+    h1 { margin:0; color: var(--muted); font-size: clamp(18px, 2.2vw, 22px); letter-spacing: -0.2px; line-height:1.2; font-weight:700; }
+    p.lead { margin:0; color: var(--muted-secondary); font-size: clamp(13px, 1.6vw, 15px); }
 
-    /* Arena for the dodging button */
     .arena {
-      position: relative;
-      width: 100%;
-      height: 180px;
-      border-radius: 10px;
-      background: linear-gradient(180deg,#ffffff 0%, #fbfdff 100%);
-      border: 1px solid #e6eef8;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position:relative;
+      width:100%;
+      height:200px;
+      border-radius:12px;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(800px 260px at 10% 10%, rgba(6,182,212,0.05), transparent 6%),
+        radial-gradient(600px 220px at 90% 80%, rgba(4,120,87,0.03), transparent 6%),
+        linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.0));
+      border:1px solid rgba(255,255,255,0.03);
+      padding:8px;
+      box-sizing:border-box;
+      touch-action: none; /* ensure touchmove is delivered for dodge */
     }
 
-    /* controls container uses pointer-events:none to allow full arena mouse tracking */
-    .controls { position: absolute; inset: 0; pointer-events: none; }
+    .controls { position:absolute; inset:0; pointer-events:none; }
 
-    /* Buttons themselves must accept pointer events */
-    .controls button {
-      pointer-events: auto;
-      font-size: 16px;
-      padding: 10px 16px;
-      border-radius: 8px;
-      border: 0;
-      cursor: pointer;
-      position: absolute;
-      transition: left 0.12s ease, top 0.12s ease;
-      user-select: none;
+    button.choice {
+      pointer-events:auto;
+      position:absolute;
+      padding:12px 18px;
+      font-size:15px;
+      border-radius:10px;
+      border:0;
+      cursor:pointer;
+      color:white;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      transform: translate(-50%, -50%) scale(1);
+      transition: transform 160ms cubic-bezier(.2,.9,.3,1), box-shadow 160ms, background-color 160ms;
+      user-select:none;
+      outline: none;
+      min-width:92px;
+      text-align:center;
+      font-weight:600;
     }
 
-    #yesBtn { background: #16a34a; color: white; }
-    #noBtn  { background: #ef4444; color: white; }
+    .choice:focus {
+      box-shadow: 0 0 0 4px var(--focus-ring), 0 8px 28px rgba(0,0,0,0.5);
+      transform: translate(-50%, -50%) scale(1.02);
+      position:relative;
+      z-index: 5;
+    }
 
-    .message { margin-top: 8px; color: #334155; min-height: 20px; }
-    .hint { font-size: 13px; color: #64748b; margin-top: 6px; }
+    button.yes { background: linear-gradient(180deg, var(--yes), var(--yes-strong)); left: 28%; top: 50%; }
+    button.no  { background: linear-gradient(180deg, #ef4444, var(--no)); left: 72%; top: 50%; transition: left 160ms ease, top 160ms ease; }
 
-    .next-screen { display: none; width: 100%; padding: 12px 0; }
-    .next-screen.active { display: block; }
+    .hint { font-size:13px; color: var(--muted-secondary); margin-top:6px; }
+    .message { min-height:20px; color: var(--muted); font-size:14px; font-weight:600; opacity:0; transform: translateY(-6px); transition: opacity 220ms ease, transform 220ms ease; }
+    .message.show { opacity:1; transform: translateY(0); }
 
-    .hidden { display: none !important; }
+    .next { display:none; width:100%; padding:18px 12px; border-radius:12px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); text-align:center; }
+    .next.active { display:block; }
 
-    /* make Back button visually consistent */
-    #backBtn { background: #0ea5e9; color: white; padding: 8px 14px; border-radius: 8px; border: 0; }
+    .back { margin-top:14px; background: linear-gradient(180deg,#0ea5e9,#0284c7); color:white; border-radius:10px; padding:10px 14px; border:0; cursor:pointer; font-weight:700; }
 
-    /* Small screens */
-    @media (max-width: 420px) {
-      .arena { height: 150px; }
-      .card { padding: 18px; }
+    .confetti { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+    .particle { position:absolute; width:10px; height:14px; opacity:0; transform-origin:center; animation: fall 900ms linear forwards; will-change: transform, opacity; border-radius:2px; }
+    @keyframes fall { 0% { opacity:1; transform: translateY(-10px) rotate(0deg) scale(1); } 100% { opacity:0; transform: translateY(260px) rotate(480deg) scale(0.95); } }
+
+    /* MOBILE adjustments: keep absolute positioning so dodge works while making buttons large & centered */
+    @media (max-width: 480px) {
+      .card { padding:20px; }
+      .arena { height:260px; padding:10px; }
+      /* keep controls absolute to allow movement, but place buttons centered and large */
+      .controls { position:absolute; inset:0; pointer-events:none; }
+      button.choice {
+        width:78%;
+        max-width:420px;
+        left:50%;
+        transform: translate(-50%,-50%);
+        padding:14px 18px;
+        font-size:16px;
+        border-radius:12px;
+      }
+      button.yes { top: 40%; }
+      button.no  { top: 60%; }
+      .hint { font-size:13px; margin-top:8px; }
+      .message { font-size:15px; }
+    }
+
+    @media (max-width: 360px) {
+      h1 { font-size:16px; }
+      .arena { height:220px; }
+      button.choice { width: 86%; }
     }
   </style>
 </head>
 <body>
-  <div class="card" role="main" aria-live="polite">
-    <div id="questionScreen">
-      <div class="question">Do you want to continue?</div>
+  <div class="container" role="main">
+    <div class="card" aria-live="polite">
+      <h1>Do you want to continue?</h1>
+      <p class="lead">Choose Yes to proceed. Try to catch No — it dodges on both desktop and mobile.</p>
 
       <div class="arena" id="arena" aria-hidden="false">
-        <div class="controls">
-          <button id="yesBtn" type="button" aria-label="Yes">Yes</button>
-          <button id="noBtn"  type="button" aria-label="No">No</button>
+        <div class="controls" id="controls">
+          <button id="yesBtn" class="choice yes" type="button" aria-label="Yes">Yes</button>
+          <button id="noBtn"  class="choice no"  type="button" aria-label="No">No</button>
         </div>
+        <div class="confetti" id="confetti" aria-hidden="true"></div>
       </div>
 
-      <div class="message" id="noMsg" style="display:none;color:#b91c1c;">
-        You clicked No! (Nice catch — the button usually dodges.)
-      </div>
-
-      <div class="hint">Move your cursor toward "No" and it will dodge. Click "Yes" to continue.</div>
+      <div id="noMessage" class="message" role="status" aria-live="polite">You clicked No — impressive! The button usually dodges.</div>
+      <div class="hint">Tip: on mobile, drag your finger toward No and it will try to dodge. Touch inside the box to play.</div>
     </div>
 
-    <div id="nextScreen" class="next-screen" aria-hidden="true">
-      <h2>Next screen</h2>
-      <p>You clicked Yes — this is the next screen.</p>
-      <button id="backBtn" type="button">Back</button>
+    <div id="next" class="next" aria-hidden="true">
+      <h2 style="margin:0;color:#e6f9ff">You're on the next screen</h2>
+      <p style="margin:8px 0 0;color:rgba(255,255,255,0.9)">Thanks for clicking Yes — implement the next step here.</p>
+      <button id="back" class="back" type="button">Go back</button>
     </div>
   </div>
 
   <script>
-    const arena = document.getElementById('arena');
-    const noBtn = document.getElementById('noBtn');
-    const yesBtn = document.getElementById('yesBtn');
-    const noMsg = document.getElementById('noMsg');
-    const questionScreen = document.getElementById('questionScreen');
-    const nextScreen = document.getElementById('nextScreen');
-    const backBtn = document.getElementById('backBtn');
+    (function () {
+      const arena = document.getElementById('arena');
+      const noBtn = document.getElementById('noBtn');
+      const yesBtn = document.getElementById('yesBtn');
+      const noMessage = document.getElementById('noMessage');
+      const next = document.getElementById('next');
+      const back = document.getElementById('back');
+      const confetti = document.getElementById('confetti');
 
-    // Defensive: ensure buttons don't submit a form
-    yesBtn.type = 'button';
-    noBtn.type = 'button';
-    backBtn.type = 'button';
+      const MIN_DISTANCE = 120; // touch is less precise so lower threshold a bit
+      const BASE_EVASION = 44;
+      const JITTER = 10;
+      const TOUCH_DEVICE = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      const CONFETTI_ENABLED = !TOUCH_DEVICE && window.innerWidth > 420;
 
-    // Tuning values
-    const MIN_DISTANCE = 120;   // px to trigger dodge
-    const BASE_EVASION = 40;    // base move distance
+      yesBtn.type = noBtn.type = back.type = 'button';
 
-    function getButtonCenterInArena(btn) {
-      const arenaRect = arena.getBoundingClientRect();
-      const btnRect = btn.getBoundingClientRect();
-      const centerX = (btnRect.left - arenaRect.left) + btnRect.width / 2;
-      const centerY = (btnRect.top - arenaRect.top) + btnRect.height / 2;
-      return { centerX, centerY, btnRect, arenaRect };
-    }
+      // NEW: flag to temporarily disable dodge while interacting with Yes
+      let ignoreDodge = false;
 
-    arena.addEventListener('mousemove', (e) => {
-      const arenaRect = arena.getBoundingClientRect();
-      const mouseX = e.clientX - arenaRect.left;
-      const mouseY = e.clientY - arenaRect.top;
+      function setInitialPositions() {
+        const rect = arena.getBoundingClientRect();
+        const centerY = rect.height * 0.5;
 
-      const { centerX: btnX, centerY: btnY, btnRect } = getButtonCenterInArena(noBtn);
-      const dx = btnX - mouseX;
-      const dy = btnY - mouseY;
-      const dist = Math.hypot(dx, dy);
+        // place yes slightly above center, no slightly below for mobile and desktop
+        yesBtn.style.left = (rect.width * 0.28) + 'px';
+        yesBtn.style.top  = (rect.height * 0.42) + 'px';
 
-      if (dist < MIN_DISTANCE) {
-        const angle = Math.atan2(dy, dx);
-        const force = (MIN_DISTANCE - dist) * 0.8 + BASE_EVASION;
-        let newCenterX = btnX + Math.cos(angle) * force;
-        let newCenterY = btnY + Math.sin(angle) * force;
-
-        // small jitter
-        const jitter = 12;
-        newCenterX += (Math.random() - 0.5) * jitter;
-        newCenterY += (Math.random() - 0.5) * jitter;
-
-        // clamp to arena
-        const pad = 8;
-        const minX = pad + btnRect.width / 2;
-        const minY = pad + btnRect.height / 2;
-        const maxX = arenaRect.width - pad - btnRect.width / 2;
-        const maxY = arenaRect.height - pad - btnRect.height / 2;
-
-        newCenterX = Math.max(minX, Math.min(newCenterX, maxX));
-        newCenterY = Math.max(minY, Math.min(newCenterY, maxY));
-
-        noBtn.style.left = (newCenterX - btnRect.width / 2) + 'px';
-        noBtn.style.top  = (newCenterY - btnRect.height / 2) + 'px';
+        noBtn.style.left  = (rect.width * 0.72) + 'px';
+        noBtn.style.top   = (rect.height * 0.58) + 'px';
       }
-    });
 
-    noBtn.addEventListener('click', () => {
-      noMsg.style.display = 'block';
-    });
+      function getBtnCenter(btn) {
+        const arenaRect = arena.getBoundingClientRect();
+        const btnRect = btn.getBoundingClientRect();
+        return {
+          x: (btnRect.left - arenaRect.left) + btnRect.width / 2,
+          y: (btnRect.top - arenaRect.top) + btnRect.height / 2,
+          btnRect,
+          arenaRect
+        };
+      }
 
-    yesBtn.addEventListener('click', () => {
-      questionScreen.classList.add('hidden');
-      nextScreen.classList.add('active');
-      nextScreen.setAttribute('aria-hidden', 'false');
-      arena.setAttribute('aria-hidden', 'true');
-      noMsg.style.display = 'none';
-    });
+      function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-    backBtn.addEventListener('click', () => {
-      questionScreen.classList.remove('hidden');
-      nextScreen.classList.remove('active');
-      nextScreen.setAttribute('aria-hidden', 'true');
-      arena.setAttribute('aria-hidden', 'false');
+      // unified pointer handler: accepts coordinates relative to arena
+      function handlePointerMoveAt(pointerX, pointerY) {
+        if (ignoreDodge) return; // respect the flag to avoid interrupting Yes action
+        const { x: btnX, y: btnY, btnRect, arenaRect } = getBtnCenter(noBtn);
+        const dx = btnX - pointerX;
+        const dy = btnY - pointerY;
+        const dist = Math.hypot(dx, dy);
 
-      // Reset No button to starting position
-      resetPositions();
-    });
+        if (dist < MIN_DISTANCE) {
+          const angle = Math.atan2(dy, dx);
+          const force = (MIN_DISTANCE - dist) * 0.95 + BASE_EVASION;
+          let newCenterX = btnX + Math.cos(angle) * force + (Math.random() - 0.5) * JITTER;
+          let newCenterY = btnY + Math.sin(angle) * force + (Math.random() - 0.5) * JITTER;
 
-    function resetPositions() {
-      // Place Yes and No at relative positions inside the arena
-      const arenaW = arena.clientWidth;
-      const arenaH = arena.clientHeight;
+          const pad = 10;
+          const minX = pad + btnRect.width / 2;
+          const minY = pad + btnRect.height / 2;
+          const maxX = arenaRect.width - pad - btnRect.width / 2;
+          const maxY = arenaRect.height - pad - btnRect.height / 2;
+          newCenterX = clamp(newCenterX, minX, maxX);
+          newCenterY = clamp(newCenterY, minY, maxY);
 
-      // center-y
-      const centerY = arenaH * 0.5;
+          noBtn.style.left = (newCenterX) + 'px';
+          noBtn.style.top  = (newCenterY) + 'px';
+        }
+      }
 
-      yesBtn.style.left = (arenaW * 0.22 - yesBtn.offsetWidth / 2) + 'px';
-      yesBtn.style.top  = (centerY - yesBtn.offsetHeight / 2) + 'px';
+      // mouse handler
+      function handleMouseMove(e) {
+        const arenaRect = arena.getBoundingClientRect();
+        const mouseX = e.clientX - arenaRect.left;
+        const mouseY = e.clientY - arenaRect.top;
+        handlePointerMoveAt(mouseX, mouseY);
+      }
 
-      noBtn.style.left  = (arenaW * 0.72 - noBtn.offsetWidth / 2) + 'px';
-      noBtn.style.top   = (centerY - noBtn.offsetHeight / 2) + 'px';
-    }
+      // touch handlers
+      function handleTouchStart(e) {
+        if (!e.touches || e.touches.length === 0) return;
+        const t = e.touches[0];
+        const arenaRect = arena.getBoundingClientRect();
+        const tx = t.clientX - arenaRect.left;
+        const ty = t.clientY - arenaRect.top;
+        // prevent page scroll while interacting inside arena
+        e.preventDefault();
+        handlePointerMoveAt(tx, ty);
+      }
 
-    window.addEventListener('resize', resetPositions);
-    window.addEventListener('load', resetPositions);
+      function handleTouchMove(e) {
+        if (!e.touches || e.touches.length === 0) return;
+        const t = e.touches[0];
+        const arenaRect = arena.getBoundingClientRect();
+        const tx = t.clientX - arenaRect.left;
+        const ty = t.clientY - arenaRect.top;
+        // keep touch interaction smooth — prevent scrolling while actively interacting
+        e.preventDefault();
+        handlePointerMoveAt(tx, ty);
+      }
+
+      // Temporarily disable dodge when the user starts interacting with Yes,
+      // so clicking/tapping Yes won't be interrupted by the dodge movement.
+      yesBtn.addEventListener('pointerdown', (ev) => {
+        ignoreDodge = true;
+        const onPointerUp = () => {
+          // small delay keeps it inert while click event and rendering settle
+          setTimeout(() => { ignoreDodge = false; }, 150);
+          document.removeEventListener('pointerup', onPointerUp);
+        };
+        document.addEventListener('pointerup', onPointerUp);
+      });
+
+      noBtn.addEventListener('click', () => {
+        noMessage.classList.add('show');
+      });
+
+      yesBtn.addEventListener('click', () => {
+        // Immediately perform the action
+        document.querySelector('.card').style.display = 'none';
+        next.classList.add('active');
+        next.setAttribute('aria-hidden', 'false');
+        arena.setAttribute('aria-hidden', 'true');
+        if (CONFETTI_ENABLED) runConfetti();
+        // ensure dodge is off briefly so the UI doesn't jitter during transition
+        ignoreDodge = true;
+        setTimeout(() => { ignoreDodge = false; }, 400);
+      });
+
+      back.addEventListener('click', () => {
+        next.classList.remove('active');
+        next.setAttribute('aria-hidden', 'true');
+        document.querySelector('.card').style.display = '';
+        arena.setAttribute('aria-hidden', 'false');
+        noMessage.classList.remove('show');
+        setInitialPositions();
+      });
+
+      function runConfetti() {
+        const colors = ['#06b6d4','#10b981','#f97316','#b91c1c','#f472b6','#60a5fa'];
+        for (let i=0;i<18;i++){
+          const el = document.createElement('div');
+          el.className = 'particle';
+          el.style.background = colors[Math.floor(Math.random()*colors.length)];
+          const yesRect = yesBtn.getBoundingClientRect();
+          const arenaRect = arena.getBoundingClientRect();
+          const startX = (yesRect.left - arenaRect.left) + yesRect.width/2 + (Math.random()-0.5)*40;
+          const startY = (yesRect.top - arenaRect.top) + yesRect.height/2 + (Math.random()-0.5)*20;
+          el.style.left = startX + 'px';
+          el.style.top  = startY + 'px';
+          el.style.transform = `translateY(-10px) rotate(${Math.random()*360}deg)`;
+          el.style.animationDuration = (800 + Math.random()*500) + 'ms';
+          el.style.opacity = 1;
+          confetti.appendChild(el);
+          setTimeout(() => el.remove(), 1500);
+        }
+      }
+
+      // attach listeners
+      arena.addEventListener('mousemove', handleMouseMove);
+      // touch listeners: passive:false so we can preventDefault() to avoid page scroll while interacting
+      arena.addEventListener('touchstart', handleTouchStart, { passive: false });
+      arena.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+      window.addEventListener('resize', setInitialPositions);
+      window.addEventListener('load', setInitialPositions);
+      window.addEventListener('orientationchange', setInitialPositions);
+    })();
   </script>
 </body>
 </html>
