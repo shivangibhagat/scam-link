@@ -1,1 +1,216 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Yes / No - Centered Dodging No Button</title>
+  <style>
+    /* Center the whole page */
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      display: grid;
+      place-items: center; /* centers horizontally and vertically */
+      background: #f0f4f8;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
 
+    /* Card in the center */
+    .card {
+      width: 640px;
+      max-width: 94%;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(20,20,30,0.08);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* center contents horizontally */
+      gap: 12px;
+      text-align: center;  /* center text inside card */
+    }
+
+    .question { font-size: 20px; margin: 4px 0 8px; }
+
+    /* Arena for the dodging button */
+    .arena {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      border-radius: 10px;
+      background: linear-gradient(180deg,#ffffff 0%, #fbfdff 100%);
+      border: 1px solid #e6eef8;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* controls container uses pointer-events:none to allow full arena mouse tracking */
+    .controls { position: absolute; inset: 0; pointer-events: none; }
+
+    /* Buttons themselves must accept pointer events */
+    .controls button {
+      pointer-events: auto;
+      font-size: 16px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+      position: absolute;
+      transition: left 0.12s ease, top 0.12s ease;
+      user-select: none;
+    }
+
+    #yesBtn { background: #16a34a; color: white; }
+    #noBtn  { background: #ef4444; color: white; }
+
+    .message { margin-top: 8px; color: #334155; min-height: 20px; }
+    .hint { font-size: 13px; color: #64748b; margin-top: 6px; }
+
+    .next-screen { display: none; width: 100%; padding: 12px 0; }
+    .next-screen.active { display: block; }
+
+    .hidden { display: none !important; }
+
+    /* make Back button visually consistent */
+    #backBtn { background: #0ea5e9; color: white; padding: 8px 14px; border-radius: 8px; border: 0; }
+
+    /* Small screens */
+    @media (max-width: 420px) {
+      .arena { height: 150px; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-live="polite">
+    <div id="questionScreen">
+      <div class="question">Do you want to continue?</div>
+
+      <div class="arena" id="arena" aria-hidden="false">
+        <div class="controls">
+          <button id="yesBtn" type="button" aria-label="Yes">Yes</button>
+          <button id="noBtn"  type="button" aria-label="No">No</button>
+        </div>
+      </div>
+
+      <div class="message" id="noMsg" style="display:none;color:#b91c1c;">
+        You clicked No! (Nice catch — the button usually dodges.)
+      </div>
+
+      <div class="hint">Move your cursor toward "No" and it will dodge. Click "Yes" to continue.</div>
+    </div>
+
+    <div id="nextScreen" class="next-screen" aria-hidden="true">
+      <h2>Next screen</h2>
+      <p>You clicked Yes — this is the next screen.</p>
+      <button id="backBtn" type="button">Back</button>
+    </div>
+  </div>
+
+  <script>
+    const arena = document.getElementById('arena');
+    const noBtn = document.getElementById('noBtn');
+    const yesBtn = document.getElementById('yesBtn');
+    const noMsg = document.getElementById('noMsg');
+    const questionScreen = document.getElementById('questionScreen');
+    const nextScreen = document.getElementById('nextScreen');
+    const backBtn = document.getElementById('backBtn');
+
+    // Defensive: ensure buttons don't submit a form
+    yesBtn.type = 'button';
+    noBtn.type = 'button';
+    backBtn.type = 'button';
+
+    // Tuning values
+    const MIN_DISTANCE = 120;   // px to trigger dodge
+    const BASE_EVASION = 40;    // base move distance
+
+    function getButtonCenterInArena(btn) {
+      const arenaRect = arena.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+      const centerX = (btnRect.left - arenaRect.left) + btnRect.width / 2;
+      const centerY = (btnRect.top - arenaRect.top) + btnRect.height / 2;
+      return { centerX, centerY, btnRect, arenaRect };
+    }
+
+    arena.addEventListener('mousemove', (e) => {
+      const arenaRect = arena.getBoundingClientRect();
+      const mouseX = e.clientX - arenaRect.left;
+      const mouseY = e.clientY - arenaRect.top;
+
+      const { centerX: btnX, centerY: btnY, btnRect } = getButtonCenterInArena(noBtn);
+      const dx = btnX - mouseX;
+      const dy = btnY - mouseY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist < MIN_DISTANCE) {
+        const angle = Math.atan2(dy, dx);
+        const force = (MIN_DISTANCE - dist) * 0.8 + BASE_EVASION;
+        let newCenterX = btnX + Math.cos(angle) * force;
+        let newCenterY = btnY + Math.sin(angle) * force;
+
+        // small jitter
+        const jitter = 12;
+        newCenterX += (Math.random() - 0.5) * jitter;
+        newCenterY += (Math.random() - 0.5) * jitter;
+
+        // clamp to arena
+        const pad = 8;
+        const minX = pad + btnRect.width / 2;
+        const minY = pad + btnRect.height / 2;
+        const maxX = arenaRect.width - pad - btnRect.width / 2;
+        const maxY = arenaRect.height - pad - btnRect.height / 2;
+
+        newCenterX = Math.max(minX, Math.min(newCenterX, maxX));
+        newCenterY = Math.max(minY, Math.min(newCenterY, maxY));
+
+        noBtn.style.left = (newCenterX - btnRect.width / 2) + 'px';
+        noBtn.style.top  = (newCenterY - btnRect.height / 2) + 'px';
+      }
+    });
+
+    noBtn.addEventListener('click', () => {
+      noMsg.style.display = 'block';
+    });
+
+    yesBtn.addEventListener('click', () => {
+      questionScreen.classList.add('hidden');
+      nextScreen.classList.add('active');
+      nextScreen.setAttribute('aria-hidden', 'false');
+      arena.setAttribute('aria-hidden', 'true');
+      noMsg.style.display = 'none';
+    });
+
+    backBtn.addEventListener('click', () => {
+      questionScreen.classList.remove('hidden');
+      nextScreen.classList.remove('active');
+      nextScreen.setAttribute('aria-hidden', 'true');
+      arena.setAttribute('aria-hidden', 'false');
+
+      // Reset No button to starting position
+      resetPositions();
+    });
+
+    function resetPositions() {
+      // Place Yes and No at relative positions inside the arena
+      const arenaW = arena.clientWidth;
+      const arenaH = arena.clientHeight;
+
+      // center-y
+      const centerY = arenaH * 0.5;
+
+      yesBtn.style.left = (arenaW * 0.22 - yesBtn.offsetWidth / 2) + 'px';
+      yesBtn.style.top  = (centerY - yesBtn.offsetHeight / 2) + 'px';
+
+      noBtn.style.left  = (arenaW * 0.72 - noBtn.offsetWidth / 2) + 'px';
+      noBtn.style.top   = (centerY - noBtn.offsetHeight / 2) + 'px';
+    }
+
+    window.addEventListener('resize', resetPositions);
+    window.addEventListener('load', resetPositions);
+  </script>
+</body>
+</html>
