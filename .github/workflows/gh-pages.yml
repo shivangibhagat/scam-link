@@ -1,9 +1,19 @@
-name: Deploy to GitHub Pages
+# Deploy repo root to GitHub Pages (gh-pages) on every push to main
+# Grants explicit permissions so the GITHUB_TOKEN can push and publish Pages
+permissions:
+  contents: write   # allow git push / update repository contents
+  pages: write      # allow Pages publishing
+  id-token: write   # optional for OIDC if you later use it
 
+name: Deploy to GitHub Pages
 on:
   push:
     branches:
       - main
+
+concurrency:
+  group: "gh-pages-deploy"
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -11,11 +21,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true    # important so the action can push using GITHUB_TOKEN
+          fetch-depth: 0               # fetch full history (recommended for some actions)
 
-      # Add build steps here if your site needs building (npm ci && npm run build)
+      # If you have a static build step (npm, hugo, etc) add it here.
+      # - name: Install and build
+      #   run: |
+      #     npm ci
+      #     npm run build
+      # and then set publish_dir to the build output (e.g. ./dist)
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .        # site files are at repo root
+          publish_dir: .        # change to ./docs or ./dist if your site files live elsewhere
           publish_branch: gh-pages
